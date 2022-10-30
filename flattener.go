@@ -60,44 +60,48 @@ func processDir(dirPath string) {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
 		log.Fatal(err)
-	} else {
-		for _, f := range files {
-			fullPath := dirPath + string(os.PathSeparator) + f.Name()
-			destFullPath := baseDir + string(os.PathSeparator) + f.Name()
-			if f.IsDir() {
-				processDir(fullPath)
-			} else {
-				if baseDir != dirPath {
-					if verbose {
-						fmt.Println("Moving file", fullPath, "to", baseDir)
-					}
-					if !overwrite {
-						if _, err := os.Stat(destFullPath); !errors.Is(err, os.ErrNotExist) {
-							fmt.Println("Cannot move file", fullPath, "to", destFullPath, "file with the same name already exists")
-							failed++
-							continue
-						}
-					}
-					merr := os.Rename(fullPath, destFullPath)
-					if merr != nil {
-						failed++
-						log.Fatal(merr)
-					} else {
-						success++
-					}
+		return
+	}
+
+	for _, f := range files {
+		fullPath := dirPath + string(os.PathSeparator) + f.Name()
+		destFullPath := baseDir + string(os.PathSeparator) + f.Name()
+		if f.IsDir() {
+			processDir(fullPath)
+		} else {
+			if baseDir == dirPath {
+				continue
+			}
+
+			if verbose {
+				fmt.Println("Moving file", fullPath, "to", baseDir)
+			}
+			if !overwrite {
+				if _, err := os.Stat(destFullPath); !errors.Is(err, os.ErrNotExist) {
+					fmt.Println("Cannot move file", fullPath, "to", destFullPath, "file with the same name already exists")
+					failed++
+					continue
 				}
 			}
-		}
-		if delete && dirPath != baseDir {
-			if verbose {
-				fmt.Println("Removing directory", dirPath)
-			}
-			merr := os.Remove(dirPath)
+			merr := os.Rename(fullPath, destFullPath)
 			if merr != nil {
+				failed++
 				log.Fatal(merr)
+			} else {
+				success++
 			}
 		}
 	}
+	if delete && dirPath != baseDir {
+		if verbose {
+			fmt.Println("Removing directory", dirPath)
+		}
+		merr := os.Remove(dirPath)
+		if merr != nil {
+			log.Fatal(merr)
+		}
+	}
+
 }
 
 // isDirectory determines if a file represented
